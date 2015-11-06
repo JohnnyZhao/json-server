@@ -1,6 +1,8 @@
 var express = require('express')
 var methodOverride = require('method-override')
 var bodyParser = require('body-parser')
+var FileCookieStore = require('tough-cookie-filestore');
+var busboyBodyParser = require('busboy-body-parser');
 var _ = require('lodash')
 var _db = require('underscore-db')
 var low = require('lowdb')
@@ -8,6 +10,11 @@ var plural = require('./plural')
 var nested = require('./nested')
 var singular = require('./singular')
 var mixins = require('../mixins')
+var request = require('request')
+
+
+var j = request.jar(new FileCookieStore('cookies.json'));
+request = request.defaults({ jar : j })
 
 module.exports = function (source) {
 
@@ -16,7 +23,8 @@ module.exports = function (source) {
 
   // Add middlewares
   router.use(bodyParser.json({limit: '10mb'}))
-  router.use(bodyParser.urlencoded({extended: false}))
+  router.use(bodyParser.urlencoded({extended: true}))
+  router.use(busboyBodyParser())
   router.use(methodOverride())
 
   // Create database
@@ -78,9 +86,33 @@ module.exports = function (source) {
     if (!res.locals.data) {
       res.status(404)
       res.locals.data = {}
+      var method = req.method;
+      var path = req.path
+      var original_url = req.originalUrl
+      if (!path.endsWith('/')) {
+        original_url = original_url.replace(path, path+'/') 
+      }
+      var url = "http://www.shanbay.com" + original_url;
+      console.log(url);
+      request({
+          method: method,
+          url: url,
+          form: req.body
+      }, function(error, response, body){
+          if (!error) {
+              res.status(response.statusCode);
+              res.locals.data = JSON.parse(body);
+          }
+          ready()
+      });
+    } else {
+        ready()
     }
 
-    router.render(req, res)
+    function ready() {
+        router.render(req, res)
+    }
+
   })
 
   return router
