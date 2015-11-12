@@ -47,7 +47,12 @@ module.exports = function (source) {
 
   // Expose render
   router.render = function (req, res) {
-    res.jsonp(res.locals.data)
+    var result = {
+        "status_code": 0, 
+        "msg": "SUCCESS",
+        "data": res.locals.data
+    }
+    res.jsonp(result)
   }
 
   // GET /db
@@ -93,7 +98,6 @@ module.exports = function (source) {
         original_url = original_url.replace(path, path+'/') 
       }
       var url = "http://www.shanbay.com" + original_url;
-      console.log(url);
       request({
           method: method,
           url: url,
